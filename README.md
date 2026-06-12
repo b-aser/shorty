@@ -37,11 +37,7 @@ A modern URL shortener with click analytics, custom vanity codes, UTM campaign b
 pnpm install
 ```
 
-2. Copy environment variables and fill in your values:
-
-```bash
-cp .env.example .env.local
-```
+2. Create `.env.local` with your database URL, auth secret, and app URL (see `.env` for reference keys).
 
 3. Push the database schema:
 

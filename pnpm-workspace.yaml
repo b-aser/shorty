@@ -1,3 +1,10 @@
+minimumReleaseAge: 10080
+minimumReleaseAgeExclude:
+  - next
+  - "@next/*"
+  - "@napi-rs/*"
+  - "@unrs/*"
+  - unrs-resolver
 trustPolicy: no-downgrade
 
 ignoredBuiltDependencies:
