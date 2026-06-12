@@ -24,6 +24,7 @@ import { toast } from "sonner";
 import { MoreHorizontal, Copy, Trash2, BarChart2 } from "lucide-react";
 import { QrCodeDialog } from "./qr-code-dialog";
 import { EditLinkDialog } from "./edit-link-dialog";
+import { Eye, Lock } from "lucide-react";
 
 type LinkRow = {
   id: string;
@@ -32,6 +33,7 @@ type LinkRow = {
   shortCode: string;
   clicks: number;
   active: boolean;
+  isProtected: boolean; // add this
   expiresAt: string | null;
   createdAt: string;
 };
@@ -98,8 +100,11 @@ export function LinksTable({
           return (
             <TableRow key={link.id}>
               <TableCell>
-                <div className="font-medium">
+                <div className="flex items-center gap-1.5 font-medium">
                   {link.title ?? link.shortCode}
+                  {link.isProtected && (
+                    <Lock className="w-3 h-3 text-muted-foreground shrink-0" />
+                  )}
                 </div>
                 <button
                   onClick={() => copyShortLink(link.shortCode)}
@@ -157,11 +162,7 @@ export function LinksTable({
                     </DropdownMenuItem>
 
                     <DropdownMenuItem asChild onClick={() => setOpen(true)}>
-                      <EditLinkDialog
-                        link={link}
-                        appUrl={appUrl}
-                        
-                      />
+                      <EditLinkDialog link={link} appUrl={appUrl} />
                     </DropdownMenuItem>
 
                     <DropdownMenuItem
@@ -170,7 +171,6 @@ export function LinksTable({
                     >
                       <Trash2 className="w-4 h-4 mr-2" /> Delete
                     </DropdownMenuItem>
-                    
                   </DropdownMenuContent>
                 </DropdownMenu>
               </TableCell>

@@ -5,6 +5,7 @@ import { nanoid } from "nanoid";
 import { v4 as uuidv4 } from "uuid";
 import { isReservedCode } from "@/lib/reserved-codes";
 import type { CreateLinkInput, UpdateLinkInput } from "@/lib/validations/link";
+import { hashPassword } from "../password";
 
 // ---- Helpers ----
 
@@ -42,7 +43,6 @@ async function getUniqueAutoCode(): Promise<string> {
 // ---- CRUD ----
 
 export async function createLink(userId: string, input: CreateLinkInput) {
-  // Resolve short code
   let shortCode:    string;
   let isCustomCode: boolean;
 
@@ -58,6 +58,15 @@ export async function createLink(userId: string, input: CreateLinkInput) {
     isCustomCode = false;
   }
 
+  // Hash password if provided
+  let passwordHash: string | null = null;
+  let isProtected                 = false;
+
+  if (input.password) {
+    passwordHash = await hashPassword(input.password);
+    isProtected  = true;
+  }
+
   const id = uuidv4();
 
   await db.insert(links).values({
@@ -67,8 +76,10 @@ export async function createLink(userId: string, input: CreateLinkInput) {
     shortCode,
     normalizedCode: shortCode.toLowerCase(),
     isCustomCode,
-    title:          input.title    ?? null,
+    title:          input.title ?? null,
     expiresAt:      input.expiresAt ? new Date(input.expiresAt) : null,
+    passwordHash,
+    isProtected,
   });
 
   return db.query.links.findFirst({
@@ -108,16 +119,30 @@ export async function updateLink(id: string, userId: string, input: UpdateLinkIn
     isCustomCode   = true;
   }
 
+  // Handle password update
+  let passwordHash = existing.passwordHash;
+  let isProtected  = existing.isProtected;
+
+  if (input.removePassword) {
+    passwordHash = null;
+    isProtected  = false;
+  } else if (input.password) {
+    passwordHash = await hashPassword(input.password);
+    isProtected  = true;
+  }
+
   await db.update(links)
     .set({
-      title:          input.title    ?? existing.title,
-      active:         input.active   ?? existing.active,
+      title:          input.title ?? existing.title,
+      active:         input.active ?? existing.active,
       expiresAt:      input.expiresAt !== undefined
                         ? (input.expiresAt ? new Date(input.expiresAt) : null)
                         : existing.expiresAt,
       shortCode,
       normalizedCode,
       isCustomCode,
+      passwordHash,
+      isProtected,
       updatedAt: new Date(),
     })
     .where(and(eq(links.id, id), eq(links.userId, userId)));

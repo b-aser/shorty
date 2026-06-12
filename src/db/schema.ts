@@ -52,18 +52,20 @@ import {
     id:             varchar("id", { length: 36 }).primaryKey(),
     userId:         varchar("user_id", { length: 36 }).notNull().references(() => users.id, { onDelete: "cascade" }),
     originalUrl:    text("original_url").notNull(),
-    shortCode:      varchar("short_code", { length: 50 }).notNull().unique(),  // increased length for vanity codes
-    normalizedCode: varchar("normalized_code", { length: 50 }).notNull().unique(), // lowercase version for uniqueness
-    isCustomCode:   boolean("is_custom_code").default(false).notNull(),        // was it user-chosen?
+    shortCode:      varchar("short_code", { length: 50 }).notNull().unique(),
+    normalizedCode: varchar("normalized_code", { length: 50 }).notNull().unique(),
+    isCustomCode:   boolean("is_custom_code").default(false).notNull(),
     title:          varchar("title", { length: 255 }),
     clicks:         int("clicks").default(0).notNull(),
     active:         boolean("active").default(true).notNull(),
+    passwordHash:   varchar("password_hash", { length: 255 }),  // null = no password
+    isProtected:    boolean("is_protected").default(false).notNull(),
     expiresAt:      timestamp("expires_at"),
     createdAt:      timestamp("created_at").defaultNow().notNull(),
     updatedAt:      timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
   }, (table) => ({
     shortCodeIdx:      index("short_code_idx").on(table.shortCode),
-    normalizedCodeIdx: index("normalized_code_idx").on(table.normalizedCode), // fast case-insensitive lookup
+    normalizedCodeIdx: index("normalized_code_idx").on(table.normalizedCode),
     userIdIdx:         index("user_id_idx").on(table.userId),
   }));
   

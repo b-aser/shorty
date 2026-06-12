@@ -32,3 +32,21 @@ export async function checkRedirectRateLimit(
   if (result.success) return { success: true };
   return { success: false, reset: result.reset };
 }
+
+
+const attempts = new Map<string, { count: number; resetAt: number }>();
+
+export function checkRateLimit(key: string, max: number, windowMs: number): boolean {
+  const now    = Date.now();
+  const record = attempts.get(key);
+
+  if (!record || now > record.resetAt) {
+    attempts.set(key, { count: 1, resetAt: now + windowMs });
+    return true; // allowed
+  }
+
+  if (record.count >= max) return false; // blocked
+
+  record.count++;
+  return true; // allowed
+}

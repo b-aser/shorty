@@ -1,44 +1,48 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getLinkByShortCode, incrementClickCount } from "@/lib/services/links";
 import { trackClick } from "@/lib/services/clicks";
-import { getIpFromRequest } from "@/lib/ip";
-import { checkRedirectRateLimit } from "@/lib/ratelimit";
+import { jwtVerify } from "jose";
+
+const SECRET = new TextEncoder().encode(process.env.BETTER_AUTH_SECRET!);
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ shortCode: string }> }
 ) {
   const { shortCode } = await params;
-  const ip = getIpFromRequest(request);
 
-  const rateLimit = await checkRedirectRateLimit(ip ?? "anonymous");
-  if (!rateLimit.success) {
-    const retryAfter = Math.max(1, Math.ceil((rateLimit.reset - Date.now()) / 1000));
-    return new NextResponse("Too many requests. Please try again later.", {
-      status: 429,
-      headers: { "Retry-After": String(retryAfter) },
-    });
-  }
-
-  // 1. Look up the link
   const link = await getLinkByShortCode(shortCode);
 
-  // 2. Not found
+  // Not found
   if (!link) {
     return NextResponse.redirect(new URL("/not-found", request.url));
   }
 
-  // 3. Disabled
+  // Disabled
   if (!link.active) {
     return NextResponse.redirect(new URL("/link-disabled", request.url));
   }
 
-  // 4. Expired
+  // Expired
   if (link.expiresAt && new Date() > link.expiresAt) {
     return NextResponse.redirect(new URL("/link-expired", request.url));
   }
 
-  // 5. Track click + increment counter (non-blocking — don't await)
+  // Password protected — check for valid cookie
+  if (link.isProtected) {
+    const cookie = request.cookies.get(`pw_${link.id}`);
+    const verified = await verifyPasswordCookie(cookie?.value, link.id);
+
+    if (!verified) {
+      // Send to password prompt page
+      return NextResponse.redirect(
+        new URL(`/link-password/${link.shortCode}`, request.url)
+      );
+    }
+  }
+
+  // Track click (non-blocking)
+  const ip        = getIpFromRequest(request);
   const userAgent = request.headers.get("user-agent");
   const referer   = request.headers.get("referer");
 
@@ -47,8 +51,26 @@ export async function GET(
     incrementClickCount(link.id),
   ]);
 
-  // 6. Redirect
-  return NextResponse.redirect(link.originalUrl, {
-    status: 307, // Temporary redirect — preserves HTTP method
-  });
+  return NextResponse.redirect(link.originalUrl, { status: 307 });
+}
+
+async function verifyPasswordCookie(
+  token: string | undefined,
+  linkId: string
+): Promise<boolean> {
+  if (!token) return false;
+  try {
+    const { payload } = await jwtVerify(token, SECRET);
+    return payload.linkId === linkId;
+  } catch {
+    return false;
+  }
+}
+
+function getIpFromRequest(request: NextRequest): string | null {
+  return (
+    request.headers.get("x-forwarded-for")?.split(",")[0].trim() ??
+    request.headers.get("x-real-ip") ??
+    null
+  );
 }
