@@ -7,33 +7,45 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import {
-  Table, TableBody, TableCell,
-  TableHead, TableHeader, TableRow,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from "@/components/ui/table";
 import {
-  DropdownMenu, DropdownMenuContent,
-  DropdownMenuItem, DropdownMenuTrigger,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { MoreHorizontal, Copy, Trash2, BarChart2 } from "lucide-react";
 import { QrCodeDialog } from "./qr-code-dialog";
+import { EditLinkDialog } from "./edit-link-dialog";
 
 type LinkRow = {
-  id:          string;
-  title:       string | null;
+  id: string;
+  title: string | null;
   originalUrl: string;
-  shortCode:   string;
-  clicks:      number;
-  active:      boolean;
-  expiresAt:   string | null;
-  createdAt:   string;
+  shortCode: string;
+  clicks: number;
+  active: boolean;
+  expiresAt: string | null;
+  createdAt: string;
 };
 
-export function LinksTable({ links }: { links: LinkRow[] }) {
-  const router    = useRouter();
+export function LinksTable({
+  links,
+  appUrl,
+}: {
+  links: LinkRow[];
+  appUrl: string;
+}) {
+  const router = useRouter();
   const [toggling, setToggling] = useState<string | null>(null);
-
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL!;
+  const [open, setOpen] = useState(false);
 
   async function copyShortLink(shortCode: string) {
     await navigator.clipboard.writeText(`${appUrl}/${shortCode}`);
@@ -43,9 +55,9 @@ export function LinksTable({ links }: { links: LinkRow[] }) {
   async function toggleActive(id: string, current: boolean) {
     setToggling(id);
     await fetch(`/api/links/${id}`, {
-      method:  "PATCH",
+      method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({ active: !current }),
+      body: JSON.stringify({ active: !current }),
     });
     router.refresh();
     setToggling(null);
@@ -79,13 +91,16 @@ export function LinksTable({ links }: { links: LinkRow[] }) {
       </TableHeader>
       <TableBody>
         {links.map((link) => {
-          const shortUrl  = `${appUrl}/${link.shortCode}`;
-          const isExpired = link.expiresAt && new Date() > new Date(link.expiresAt);
+          const shortUrl = `${appUrl}/${link.shortCode}`;
+          const isExpired =
+            link.expiresAt && new Date() > new Date(link.expiresAt);
 
           return (
             <TableRow key={link.id}>
               <TableCell>
-                <div className="font-medium">{link.title ?? link.shortCode}</div>
+                <div className="font-medium">
+                  {link.title ?? link.shortCode}
+                </div>
                 <button
                   onClick={() => copyShortLink(link.shortCode)}
                   className="text-xs text-primary hover:underline truncate max-w-[160px] block text-left"
@@ -128,20 +143,34 @@ export function LinksTable({ links }: { links: LinkRow[] }) {
                       <MoreHorizontal className="w-4 h-4" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem>
-                    <QrCodeDialog shortUrl={shortUrl} title={link.title ?? link.shortCode} />
+                  <DropdownMenuContent align="end" className="bg-background">
+                    <DropdownMenuItem asChild onClick={() => setOpen(true)}>
+                      <QrCodeDialog
+                        shortUrl={shortUrl}
+                        title={link.title ?? link.shortCode}
+                      />
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => copyShortLink(link.shortCode)}>
+                    <DropdownMenuItem
+                      onClick={() => copyShortLink(link.shortCode)}
+                    >
                       <Copy className="w-4 h-4 mr-2" /> Copy link
                     </DropdownMenuItem>
+
+                    <DropdownMenuItem asChild onClick={() => setOpen(true)}>
+                      <EditLinkDialog
+                        link={link}
+                        appUrl={appUrl}
+                        
+                      />
+                    </DropdownMenuItem>
+
                     <DropdownMenuItem
                       onClick={() => deleteLink(link.id)}
                       className="text-destructive"
                     >
                       <Trash2 className="w-4 h-4 mr-2" /> Delete
                     </DropdownMenuItem>
-
+                    
                   </DropdownMenuContent>
                 </DropdownMenu>
               </TableCell>

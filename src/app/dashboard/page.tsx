@@ -9,6 +9,7 @@ export default async function DashboardPage() {
   if (!session) redirect("/sign-in");
 
   const links = await getLinksByUser(session.user.id);
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL!;
 
   return (
     <div className="space-y-6">
@@ -18,9 +19,8 @@ export default async function DashboardPage() {
           {links.length} link{links.length !== 1 ? "s" : ""} total
         </p>
       </div>
-
-      <CreateLinkForm />
-      <LinksTable links={links as any} />
+      <CreateLinkForm appUrl={appUrl} />
+      <LinksTable links={links as any} appUrl={appUrl} />
     </div>
   );
 }

@@ -49,19 +49,22 @@ import {
   
   // ---------- App tables ----------
   export const links = mysqlTable("links", {
-    id:          varchar("id", { length: 36 }).primaryKey(),
-    userId:      varchar("user_id", { length: 36 }).notNull().references(() => users.id, { onDelete: "cascade" }),
-    originalUrl: text("original_url").notNull(),
-    shortCode:   varchar("short_code", { length: 20 }).notNull().unique(),
-    title:       varchar("title", { length: 255 }),         // optional friendly name
-    clicks:      int("clicks").default(0).notNull(),
-    active:      boolean("active").default(true).notNull(), // enable/disable link
-    expiresAt:   timestamp("expires_at"),                   // optional expiry
-    createdAt:   timestamp("created_at").defaultNow().notNull(),
-    updatedAt:   timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+    id:             varchar("id", { length: 36 }).primaryKey(),
+    userId:         varchar("user_id", { length: 36 }).notNull().references(() => users.id, { onDelete: "cascade" }),
+    originalUrl:    text("original_url").notNull(),
+    shortCode:      varchar("short_code", { length: 50 }).notNull().unique(),  // increased length for vanity codes
+    normalizedCode: varchar("normalized_code", { length: 50 }).notNull().unique(), // lowercase version for uniqueness
+    isCustomCode:   boolean("is_custom_code").default(false).notNull(),        // was it user-chosen?
+    title:          varchar("title", { length: 255 }),
+    clicks:         int("clicks").default(0).notNull(),
+    active:         boolean("active").default(true).notNull(),
+    expiresAt:      timestamp("expires_at"),
+    createdAt:      timestamp("created_at").defaultNow().notNull(),
+    updatedAt:      timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
   }, (table) => ({
-    shortCodeIdx: index("short_code_idx").on(table.shortCode),
-    userIdIdx:    index("user_id_idx").on(table.userId),
+    shortCodeIdx:      index("short_code_idx").on(table.shortCode),
+    normalizedCodeIdx: index("normalized_code_idx").on(table.normalizedCode), // fast case-insensitive lookup
+    userIdIdx:         index("user_id_idx").on(table.userId),
   }));
   
   export const clickEvents = mysqlTable("click_events", {

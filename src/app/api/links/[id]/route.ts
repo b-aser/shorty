@@ -17,9 +17,8 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
 }
 
 // PATCH /api/links/:id
-export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const { id }  = await params;
     const session = await requireSession();
     const body    = await req.json();
     const parsed  = updateLinkSchema.safeParse(body);
@@ -31,11 +30,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       );
     }
 
-    const link = await updateLink(id, session.user.id, parsed.data);
+    const link = await updateLink(params.id, session.user.id, parsed.data);
     if (!link) return NextResponse.json({ error: "Not found" }, { status: 404 });
     return NextResponse.json(link);
-  } catch {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Something went wrong";
+    const status  = message.includes("taken") || message.includes("reserved") ? 409 : 401;
+    return NextResponse.json({ error: message }, { status });
   }
 }
 

@@ -30,7 +30,9 @@ export async function POST(req: NextRequest) {
 
     const link = await createLink(session.user.id, parsed.data);
     return NextResponse.json(link, { status: 201 });
-  } catch {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Something went wrong";
+    const status  = message.includes("taken") || message.includes("reserved") ? 409 : 401;
+    return NextResponse.json({ error: message }, { status });
   }
 }

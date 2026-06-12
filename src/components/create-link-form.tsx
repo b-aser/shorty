@@ -6,31 +6,43 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CustomCodeInput } from "@/components/custom-code-input";
 import { toast } from "sonner";
+import { ChevronDown, ChevronUp } from "lucide-react";
 
-export function CreateLinkForm() {
-  const router   = useRouter();
-  const [form, setForm]       = useState({ originalUrl: "", title: "" });
-  const [loading, setLoading] = useState(false);
+export function CreateLinkForm({ appUrl }: { appUrl: string }) {
+  const router    = useRouter();
+
+  const [form, setForm]           = useState({ originalUrl: "", title: "", customCode: "" });
+  const [loading, setLoading]     = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
 
+    const body: Record<string, string> = { originalUrl: form.originalUrl };
+    if (form.title)      body.title      = form.title;
+    if (form.customCode) body.customCode = form.customCode;
+
     const res = await fetch("/api/links", {
       method:  "POST",
       headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify(form),
+      body:    JSON.stringify(body),
     });
 
     if (res.ok) {
-      toast.success("Link created!", { description: "Your short link is ready." });
-      setForm({ originalUrl: "", title: "" });
+      const link = await res.json();
+      toast.success("Link created!", {
+        description: `${appUrl}/${link.shortCode}`,
+      });
+      setForm({ originalUrl: "", title: "", customCode: "" });
+      setShowAdvanced(false);
       router.refresh();
     } else {
-      const err = await res.json();
-      toast.error(err.error ?? "Something went wrong", {
-        description: err.error ?? "Something went wrong",
+      const { error } = await res.json();
+      toast.error("Error", {
+        description: error ?? "Something went wrong",
       });
     }
 
@@ -43,30 +55,55 @@ export function CreateLinkForm() {
         <CardTitle className="text-lg">Shorten a URL</CardTitle>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3">
-          <div className="flex-1 space-y-1">
-            <Label htmlFor="originalUrl" className="sr-only">URL</Label>
-            <Input
-              id="originalUrl"
-              type="url"
-              placeholder="https://your-long-url.com/goes/here"
-              value={form.originalUrl}
-              onChange={(e) => setForm({ ...form, originalUrl: e.target.value })}
-              required
-            />
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Main row */}
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex-1">
+              <Label htmlFor="originalUrl" className="sr-only">URL</Label>
+              <Input
+                id="originalUrl"
+                type="url"
+                placeholder="https://your-long-url.com/goes/here"
+                value={form.originalUrl}
+                onChange={(e) => setForm({ ...form, originalUrl: e.target.value })}
+                required
+              />
+            </div>
+            <Button type="submit" disabled={loading} className="shrink-0">
+              {loading ? "Shortening..." : "Shorten"}
+            </Button>
           </div>
-          <div className="w-full sm:w-48 space-y-1">
-            <Label htmlFor="title" className="sr-only">Title (optional)</Label>
-            <Input
-              id="title"
-              placeholder="Title (optional)"
-              value={form.title}
-              onChange={(e) => setForm({ ...form, title: e.target.value })}
-            />
-          </div>
-          <Button type="submit" disabled={loading} className="shrink-0">
-            {loading ? "Shortening..." : "Shorten"}
-          </Button>
+
+          {/* Advanced toggle */}
+          <button
+            type="button"
+            onClick={() => setShowAdvanced((v) => !v)}
+            className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
+          >
+            {showAdvanced ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            {showAdvanced ? "Hide options" : "Custom code & title"}
+          </button>
+
+          {/* Advanced fields */}
+          {showAdvanced && (
+            <div className="space-y-4 pt-1">
+              <div className="space-y-2">
+                <Label htmlFor="title">Title <span className="text-muted-foreground font-normal">(optional)</span></Label>
+                <Input
+                  id="title"
+                  placeholder="e.g. My GitHub profile"
+                  value={form.title}
+                  onChange={(e) => setForm({ ...form, title: e.target.value })}
+                />
+              </div>
+
+              <CustomCodeInput
+                value={form.customCode}
+                onChange={(val) => setForm({ ...form, customCode: val })}
+                appUrl={appUrl}
+              />
+            </div>
+          )}
         </form>
       </CardContent>
     </Card>
