@@ -4,11 +4,12 @@ import { getLinkAnalytics } from "@/lib/services/analytics";
 
 export async function GET(
   _: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id }  = await params;
     const session = await requireSession();
-    const data    = await getLinkAnalytics(params.id, session.user.id);
+    const data    = await getLinkAnalytics(id, session.user.id);
     if (!data) return NextResponse.json({ error: "Not found" }, { status: 404 });
     return NextResponse.json(data);
   } catch {
