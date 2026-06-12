@@ -58,15 +58,25 @@ import {
     title:          varchar("title", { length: 255 }),
     clicks:         int("clicks").default(0).notNull(),
     active:         boolean("active").default(true).notNull(),
-    passwordHash:   varchar("password_hash", { length: 255 }),  // null = no password
+    passwordHash:   varchar("password_hash", { length: 255 }),
     isProtected:    boolean("is_protected").default(false).notNull(),
-    expiresAt:      timestamp("expires_at"),
-    createdAt:      timestamp("created_at").defaultNow().notNull(),
-    updatedAt:      timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+  
+    // UTM parameters — all optional
+    utmSource:    varchar("utm_source",   { length: 255 }),  // e.g. twitter, newsletter
+    utmMedium:    varchar("utm_medium",   { length: 255 }),  // e.g. social, email, cpc
+    utmCampaign:  varchar("utm_campaign", { length: 255 }),  // e.g. summer-sale
+    utmTerm:      varchar("utm_term",     { length: 255 }),  // e.g. running+shoes
+    utmContent:   varchar("utm_content",  { length: 255 }),  // e.g. banner-a
+  
+    expiresAt:    timestamp("expires_at"),
+    createdAt:    timestamp("created_at").defaultNow().notNull(),
+    updatedAt:    timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
   }, (table) => ({
     shortCodeIdx:      index("short_code_idx").on(table.shortCode),
     normalizedCodeIdx: index("normalized_code_idx").on(table.normalizedCode),
     userIdIdx:         index("user_id_idx").on(table.userId),
+    utmCampaignIdx:    index("utm_campaign_idx").on(table.utmCampaign), // for analytics queries
+    utmSourceIdx:      index("utm_source_idx").on(table.utmSource),     // for analytics queries
   }));
   
   export const clickEvents = mysqlTable("click_events", {

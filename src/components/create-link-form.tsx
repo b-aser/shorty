@@ -10,6 +10,8 @@ import { CustomCodeInput } from "@/components/custom-code-input";
 import { toast } from "sonner";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { PasswordInput } from "./password-input";
+import { UtmBuilder, type UtmValues } from "@/components/utm-builder";
+import { formatApiError } from "@/lib/utils";
 
 export function CreateLinkForm({ appUrl }: { appUrl: string }) {
   const router = useRouter();
@@ -23,6 +25,14 @@ export function CreateLinkForm({ appUrl }: { appUrl: string }) {
     customCode: "",
     password: "", // add this
   });
+  // Add UTM to form state
+  const [utmValues, setUtmValues] = useState<UtmValues>({
+    utmSource: "",
+    utmMedium: "",
+    utmCampaign: "",
+    utmTerm: "",
+    utmContent: "",
+  });
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -33,6 +43,13 @@ export function CreateLinkForm({ appUrl }: { appUrl: string }) {
     if (form.title) body.title = form.title;
     if (form.customCode) body.customCode = form.customCode;
     if (form.password) body.password = form.password; // add this
+    // Add UTM to body construction in handleSubmit
+    if (utmValues.utmSource) body.utmSource = utmValues.utmSource;
+    if (utmValues.utmMedium) body.utmMedium = utmValues.utmMedium;
+    if (utmValues.utmCampaign) body.utmCampaign = utmValues.utmCampaign;
+    if (utmValues.utmTerm) body.utmTerm = utmValues.utmTerm;
+    if (utmValues.utmContent) body.utmContent = utmValues.utmContent;
+
     const res = await fetch("/api/links", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -41,6 +58,13 @@ export function CreateLinkForm({ appUrl }: { appUrl: string }) {
 
     if (res.ok) {
       const link = await res.json();
+      setUtmValues({
+        utmSource: "",
+        utmMedium: "",
+        utmCampaign: "",
+        utmTerm: "",
+        utmContent: "",
+      });
       toast.success("Link created!", {
         description: `${appUrl}/${link.shortCode}`,
       });
@@ -50,7 +74,7 @@ export function CreateLinkForm({ appUrl }: { appUrl: string }) {
     } else {
       const { error } = await res.json();
       toast.error("Error", {
-        description: error ?? "Something went wrong",
+        description: formatApiError(error),
       });
     }
 
@@ -132,6 +156,11 @@ export function CreateLinkForm({ appUrl }: { appUrl: string }) {
               <PasswordInput
                 value={form.password}
                 onChange={(val) => setForm({ ...form, password: val })}
+              />
+              <UtmBuilder
+                values={utmValues}
+                onChange={setUtmValues}
+                originalUrl={form.originalUrl}
               />
             </div>
           )}

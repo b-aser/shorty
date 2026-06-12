@@ -21,21 +21,27 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
-import { MoreHorizontal, Copy, Trash2, BarChart2 } from "lucide-react";
+import { MoreHorizontal, Copy, Trash2, BarChart2, Lock } from "lucide-react";
 import { QrCodeDialog } from "./qr-code-dialog";
 import { EditLinkDialog } from "./edit-link-dialog";
-import { Eye, Lock } from "lucide-react";
+import { hasUtmParams } from "@/lib/utm";
 
+// Update LinkRow type — add UTM fields
 type LinkRow = {
-  id: string;
-  title: string | null;
+  id:          string;
+  title:       string | null;
   originalUrl: string;
-  shortCode: string;
-  clicks: number;
-  active: boolean;
-  isProtected: boolean; // add this
-  expiresAt: string | null;
-  createdAt: string;
+  shortCode:   string;
+  clicks:      number;
+  active:      boolean;
+  isProtected: boolean;
+  utmSource:   string | null;
+  utmMedium:   string | null;
+  utmCampaign: string | null;
+  utmTerm:     string | null;
+  utmContent:  string | null;
+  expiresAt:   string | null;
+  createdAt:   string;
 };
 
 export function LinksTable({
@@ -47,7 +53,6 @@ export function LinksTable({
 }) {
   const router = useRouter();
   const [toggling, setToggling] = useState<string | null>(null);
-  const [open, setOpen] = useState(false);
 
   async function copyShortLink(shortCode: string) {
     await navigator.clipboard.writeText(`${appUrl}/${shortCode}`);
@@ -105,6 +110,11 @@ export function LinksTable({
                   {link.isProtected && (
                     <Lock className="w-3 h-3 text-muted-foreground shrink-0" />
                   )}
+                  {hasUtmParams(link) && (
+                    <Badge variant="outline" className="text-xs px-1 py-0 h-4">
+                      UTM
+                    </Badge>
+                  )}
                 </div>
                 <button
                   onClick={() => copyShortLink(link.shortCode)}
@@ -149,7 +159,7 @@ export function LinksTable({
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="bg-background">
-                    <DropdownMenuItem asChild onClick={() => setOpen(true)}>
+                    <DropdownMenuItem asChild>
                       <QrCodeDialog
                         shortUrl={shortUrl}
                         title={link.title ?? link.shortCode}
@@ -161,7 +171,7 @@ export function LinksTable({
                       <Copy className="w-4 h-4 mr-2" /> Copy link
                     </DropdownMenuItem>
 
-                    <DropdownMenuItem asChild onClick={() => setOpen(true)}>
+                    <DropdownMenuItem asChild>
                       <EditLinkDialog link={link} appUrl={appUrl} />
                     </DropdownMenuItem>
 

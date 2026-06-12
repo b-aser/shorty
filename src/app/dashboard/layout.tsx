@@ -12,7 +12,7 @@ export default async function DashboardLayout({
   if (!session) redirect("/sign-in");
 
   return (
-    <div className="min-h-screen bg-muted/40">
+    <div className="min-h-screen bg-muted/40" suppressHydrationWarning>
       <Navbar user={session.user} />
       <main className="container mx-auto px-4 py-8 max-w-6xl">
         {children}

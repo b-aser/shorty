@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getLinkByShortCode, incrementClickCount } from "@/lib/services/links";
 import { trackClick } from "@/lib/services/clicks";
+import { buildUrlWithUtm } from "@/lib/utm";
 import { jwtVerify } from "jose";
 
 const SECRET = new TextEncoder().encode(process.env.BETTER_AUTH_SECRET!);
@@ -13,33 +14,37 @@ export async function GET(
 
   const link = await getLinkByShortCode(shortCode);
 
-  // Not found
   if (!link) {
     return NextResponse.redirect(new URL("/not-found", request.url));
   }
 
-  // Disabled
   if (!link.active) {
     return NextResponse.redirect(new URL("/link-disabled", request.url));
   }
 
-  // Expired
   if (link.expiresAt && new Date() > link.expiresAt) {
     return NextResponse.redirect(new URL("/link-expired", request.url));
   }
 
-  // Password protected — check for valid cookie
   if (link.isProtected) {
-    const cookie = request.cookies.get(`pw_${link.id}`);
+    const cookie   = request.cookies.get(`pw_${link.id}`);
     const verified = await verifyPasswordCookie(cookie?.value, link.id);
 
     if (!verified) {
-      // Send to password prompt page
       return NextResponse.redirect(
         new URL(`/link-password/${link.shortCode}`, request.url)
       );
     }
   }
+
+  // Build final destination URL with UTM params merged in
+  const destination = buildUrlWithUtm(link.originalUrl, {
+    utmSource:   link.utmSource,
+    utmMedium:   link.utmMedium,
+    utmCampaign: link.utmCampaign,
+    utmTerm:     link.utmTerm,
+    utmContent:  link.utmContent,
+  });
 
   // Track click (non-blocking)
   const ip        = getIpFromRequest(request);
@@ -51,7 +56,7 @@ export async function GET(
     incrementClickCount(link.id),
   ]);
 
-  return NextResponse.redirect(link.originalUrl, { status: 307 });
+  return NextResponse.redirect(destination, { status: 307 });
 }
 
 async function verifyPasswordCookie(
