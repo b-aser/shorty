@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { MoreHorizontal, Copy, Trash2, BarChart2 } from "lucide-react";
+import { QrCodeDialog } from "./qr-code-dialog";
 
 type LinkRow = {
   id:          string;
@@ -128,6 +129,9 @@ export function LinksTable({ links }: { links: LinkRow[] }) {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
+                    <DropdownMenuItem>
+                    <QrCodeDialog shortUrl={shortUrl} title={link.title ?? link.shortCode} />
+                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => copyShortLink(link.shortCode)}>
                       <Copy className="w-4 h-4 mr-2" /> Copy link
                     </DropdownMenuItem>
@@ -137,6 +141,7 @@ export function LinksTable({ links }: { links: LinkRow[] }) {
                     >
                       <Trash2 className="w-4 h-4 mr-2" /> Delete
                     </DropdownMenuItem>
+
                   </DropdownMenuContent>
                 </DropdownMenu>
               </TableCell>

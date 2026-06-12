@@ -1,12 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getLinkByShortCode, incrementClickCount } from "@/lib/services/links";
 import { trackClick } from "@/lib/services/clicks";
+import { getIpFromRequest } from "@/lib/ip";
+import { checkRedirectRateLimit } from "@/lib/ratelimit";
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ shortCode: string }> }
 ) {
   const { shortCode } = await params;
+  const ip = getIpFromRequest(request);
+
+  const rateLimit = await checkRedirectRateLimit(ip ?? "anonymous");
+  if (!rateLimit.success) {
+    const retryAfter = Math.max(1, Math.ceil((rateLimit.reset - Date.now()) / 1000));
+    return new NextResponse("Too many requests. Please try again later.", {
+      status: 429,
+      headers: { "Retry-After": String(retryAfter) },
+    });
+  }
 
   // 1. Look up the link
   const link = await getLinkByShortCode(shortCode);
@@ -27,7 +39,6 @@ export async function GET(
   }
 
   // 5. Track click + increment counter (non-blocking — don't await)
-  const ip        = getIpFromRequest(request);
   const userAgent = request.headers.get("user-agent");
   const referer   = request.headers.get("referer");
 
@@ -40,13 +51,4 @@ export async function GET(
   return NextResponse.redirect(link.originalUrl, {
     status: 307, // Temporary redirect — preserves HTTP method
   });
-}
-
-function getIpFromRequest(request: NextRequest): string | null {
-  // Vercel / proxies set this header
-  return (
-    request.headers.get("x-forwarded-for")?.split(",")[0].trim() ??
-    request.headers.get("x-real-ip") ??
-    null
-  );
 }
